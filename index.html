@@ -11,8 +11,8 @@
     <section class="hero">
       <h1>키워드 이슈 보고서</h1>
       <p>
-        Gemini API의 Google 검색으로 최근 7일 주요 이슈를 수집하고,
-        <strong>웹에서 바로 확인</strong>한 뒤 <strong>won911227@gmail.com</strong>으로 자동 발송합니다.
+        Gemini API의 Google 검색으로 최근 7일 주요 이슈를 수집하고
+        <strong>웹에서 확인</strong>한 뒤, 원할 때 <strong>won911227@gmail.com</strong>으로 이메일을 발송할 수 있습니다.
       </p>
     </section>
 
@@ -33,7 +33,9 @@
               required
             ></textarea>
             <div class="hint">쉼표(,) 또는 줄바꿈으로 여러 키워드를 입력할 수 있습니다.</div>
-            <button type="submit" id="submit-btn" class="btn-primary">보고서 생성 및 이메일 발송</button>
+            <div class="button-row">
+              <button type="submit" id="generate-btn" class="btn-primary">보고서 생성</button>
+            </div>
           </form>
           <div id="status" class="status"></div>
         </section>
@@ -45,6 +47,7 @@
               <div id="viewer-meta" class="viewer-meta"></div>
             </div>
             <div class="viewer-actions">
+              <button type="button" id="send-email-btn" class="btn-secondary" disabled>이메일 발송</button>
               <button type="button" id="copy-report-btn" class="btn-ghost">전체 복사</button>
             </div>
           </div>

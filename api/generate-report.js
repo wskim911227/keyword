@@ -1,8 +1,5 @@
-const nodemailer = require("nodemailer");
-
 const MODEL = "gemini-2.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-const DEFAULT_RECIPIENT = "won911227@gmail.com";
 
 function parseKeywords(raw) {
   return String(raw || "")
@@ -99,22 +96,6 @@ function toMarkdown({ keywords, generatedAt, body, searchQueries, sources }) {
   return `${lines.join("\n").trim()}\n`;
 }
 
-function markdownToHtml(markdown) {
-  let html = markdown;
-  html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-  html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener">$1</a>'
-  );
-  html = html.replace(/^- (.+)$/gm, "<li>$1</li>");
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, (block) => `<ul>${block}</ul>`);
-  html = html.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
-  return `<html><body style="font-family:sans-serif;line-height:1.6;">${html}</body></html>`;
-}
-
 async function generateIssueReport(apiKey, keywords) {
   const generatedAt = new Date();
   const prompt = buildPrompt(keywords, generatedAt);
@@ -156,36 +137,6 @@ async function generateIssueReport(apiKey, keywords) {
   };
 }
 
-async function sendReportEmail(report) {
-  const gmailUser = (process.env.GMAIL_USER || "").trim();
-  const gmailPassword = (process.env.GMAIL_APP_PASSWORD || "").trim();
-  const recipient = (process.env.REPORT_RECIPIENT || DEFAULT_RECIPIENT).trim();
-
-  if (!gmailUser || !gmailPassword) {
-    throw new Error(
-      "GMAIL_USER, GMAIL_APP_PASSWORD 환경변수가 필요합니다. Vercel 대시보드에서 설정해 주세요."
-    );
-  }
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: gmailUser,
-      pass: gmailPassword,
-    },
-  });
-
-  await transporter.sendMail({
-    from: gmailUser,
-    to: recipient,
-    subject: report.title,
-    text: report.markdown,
-    html: markdownToHtml(report.markdown),
-  });
-
-  return recipient;
-}
-
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -214,7 +165,6 @@ module.exports = async (req, res) => {
 
   try {
     const report = await generateIssueReport(apiKey, keywords);
-    const recipient = await sendReportEmail(report);
 
     return res.status(200).json({
       success: true,
@@ -225,7 +175,6 @@ module.exports = async (req, res) => {
       body: report.body,
       report: report.markdown,
       sources: report.sources,
-      recipient,
       source_count: report.sources.length,
       search_queries: report.searchQueries,
     });

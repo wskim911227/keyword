@@ -3,7 +3,8 @@ const MAX_HISTORY = 30;
 
 const form = document.getElementById("report-form");
 const statusEl = document.getElementById("status");
-const submitBtn = document.getElementById("submit-btn");
+const generateBtn = document.getElementById("generate-btn");
+const sendEmailBtn = document.getElementById("send-email-btn");
 const historyList = document.getElementById("history-list");
 const viewer = document.getElementById("report-viewer");
 const viewerTitle = document.getElementById("viewer-title");
@@ -104,6 +105,28 @@ function saveHistory(reports) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, MAX_HISTORY)));
 }
 
+function updateReportInHistory(report) {
+  const reports = loadHistory().map((item) => (item.id === report.id ? report : item));
+  saveHistory(reports);
+  renderHistory();
+}
+
+function getCurrentReport() {
+  if (!currentReportId) return null;
+  return loadHistory().find((item) => item.id === currentReportId) || null;
+}
+
+function updateEmailButton(report) {
+  if (!report) {
+    sendEmailBtn.disabled = true;
+    sendEmailBtn.textContent = "이메일 발송";
+    return;
+  }
+
+  sendEmailBtn.disabled = false;
+  sendEmailBtn.textContent = report.email_sent ? "이메일 재발송" : "이메일 발송";
+}
+
 function addToHistory(report) {
   const reports = loadHistory().filter((item) => item.id !== report.id);
   reports.unshift(report);
@@ -181,17 +204,23 @@ function showReport(report) {
   currentReportId = report.id;
   viewer.classList.add("show");
   viewerTitle.textContent = report.title;
+
+  const emailStatus = report.email_sent
+    ? `발송 완료 (${escapeHtml(report.recipient || "won911227@gmail.com")})`
+    : "미발송";
+
   viewerMeta.innerHTML = `
     생성 시각: ${escapeHtml(formatDateTime(report.generated_at))}<br>
     검색 키워드: ${escapeHtml((report.keywords || []).join(", "))}<br>
     수집 기간: 최근 7일<br>
-    이메일 발송: ${escapeHtml(report.recipient || "won911227@gmail.com")}
+    이메일: ${emailStatus}
   `;
 
   reportContent.innerHTML = markdownToHtml(report.body || "");
   renderSources(report.sources || []);
   renderQueries(report.search_queries || []);
   setActiveTab("report");
+  updateEmailButton(report);
   renderHistory();
   viewer.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -206,8 +235,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
 });
 
 copyBtn.addEventListener("click", async () => {
-  const reports = loadHistory();
-  const report = reports.find((item) => item.id === currentReportId);
+  const report = getCurrentReport();
   if (!report?.report) return;
 
   try {
@@ -226,7 +254,7 @@ form.addEventListener("submit", async (event) => {
   const keywords = document.getElementById("keywords").value.trim();
   if (!keywords) return;
 
-  submitBtn.disabled = true;
+  generateBtn.disabled = true;
   setStatus(
     "loading",
     "Google 검색으로 최근 7일 이슈를 수집하고 보고서를 생성 중입니다...\n완료까지 30초~2분 정도 걸릴 수 있습니다."
@@ -252,7 +280,8 @@ form.addEventListener("submit", async (event) => {
       report: data.report,
       sources: data.sources,
       search_queries: data.search_queries,
-      recipient: data.recipient,
+      email_sent: false,
+      recipient: null,
     };
 
     addToHistory(report);
@@ -261,12 +290,57 @@ form.addEventListener("submit", async (event) => {
 
     setStatus(
       "success",
-      `보고서 생성 완료!\n웹에서 아래 보고서를 확인할 수 있습니다.\n이메일 발송: ${data.recipient}\n참조 출처: ${data.source_count}건`
+      `보고서 생성 완료!\n웹에서 아래 보고서를 확인한 뒤, 필요하면 이메일 발송 버튼을 눌러 주세요.\n참조 출처: ${data.source_count}건`
     );
   } catch (error) {
     setStatus("error", error.message);
   } finally {
-    submitBtn.disabled = false;
+    generateBtn.disabled = false;
+  }
+});
+
+sendEmailBtn.addEventListener("click", async () => {
+  const report = getCurrentReport();
+  if (!report?.report) {
+    setStatus("error", "먼저 보고서를 생성하거나 선택해 주세요.");
+    return;
+  }
+
+  sendEmailBtn.disabled = true;
+  setStatus("loading", "이메일을 발송 중입니다...");
+
+  try {
+    const response = await fetch("/api/send-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: report.title,
+        report: report.report,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "이메일 발송에 실패했습니다.");
+    }
+
+    const updatedReport = {
+      ...report,
+      email_sent: true,
+      recipient: data.recipient,
+    };
+    updateReportInHistory(updatedReport);
+    showReport(updatedReport);
+
+    setStatus("success", `이메일 발송 완료!\n수신: ${data.recipient}`);
+  } catch (error) {
+    setStatus("error", error.message);
+    updateEmailButton(report);
+  } finally {
+    if (!getCurrentReport()?.email_sent) {
+      sendEmailBtn.disabled = false;
+    } else {
+      updateEmailButton(getCurrentReport());
+    }
   }
 });
 
@@ -283,3 +357,4 @@ function openReportFromHash() {
 window.addEventListener("hashchange", openReportFromHash);
 renderHistory();
 openReportFromHash();
+updateEmailButton(getCurrentReport());
