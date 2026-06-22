@@ -20,9 +20,8 @@ const reportContent = document.getElementById("report-content");
 const sourcesPanel = document.getElementById("sources-panel");
 const queriesPanel = document.getElementById("queries-panel");
 const copyBtn = document.getElementById("copy-report-btn");
-const googleAuthStatus = document.getElementById("google-auth-status");
-const googleLoginBtn = document.getElementById("google-login-btn");
-const googleLogoutBtn = document.getElementById("google-logout-btn");
+
+const DEFAULT_RECIPIENT = "won911227@gmail.com";
 
 let currentReportId = null;
 let loadingTimer = null;
@@ -196,12 +195,12 @@ function getCurrentReport() {
 function updateEmailButton(report) {
   if (!report) {
     sendEmailBtn.disabled = true;
-    sendEmailBtn.textContent = "② 이메일 자동 발송";
+    sendEmailBtn.textContent = "이메일 자동 발송";
     return;
   }
 
   sendEmailBtn.disabled = false;
-  sendEmailBtn.textContent = report.email_sent ? "② 이메일 재발송" : "② 이메일 자동 발송";
+  sendEmailBtn.textContent = report.email_sent ? "이메일 재발송" : "이메일 자동 발송";
 }
 
 function addToHistory(report) {
@@ -277,30 +276,12 @@ function setActiveTab(tabName) {
   });
 }
 
-function updateGoogleLoginUI() {
-  const recipient = window.GmailAuth.getReportRecipient();
-  const connected = window.GmailAuth.isGoogleConnected();
-  const email = window.GmailAuth.getGoogleUserEmail();
-
-  if (connected && email) {
-    googleAuthStatus.textContent = `① 로그인 완료: ${email} → ② 이메일 자동 발송 버튼만 누르면 ${recipient} 로 자동 발송됩니다.`;
-    googleLoginBtn.hidden = true;
-    googleLogoutBtn.hidden = false;
-    return;
-  }
-
-  googleAuthStatus.textContent =
-    `① Google 로그인 후 ② 이메일 자동 발송 버튼을 누르면 ${recipient} 으로 자동 발송됩니다.`;
-  googleLoginBtn.hidden = false;
-  googleLogoutBtn.hidden = true;
-}
-
 function showReport(report) {
   currentReportId = report.id;
   viewer.classList.add("show");
   viewerTitle.textContent = report.title;
 
-  const recipient = report.recipient || window.GmailAuth.getReportRecipient();
+  const recipient = report.recipient || DEFAULT_RECIPIENT;
   const emailStatus = report.email_sent
     ? `발송 완료 (${escapeHtml(recipient)})`
     : `미발송 (대상: ${escapeHtml(recipient)})`;
@@ -469,36 +450,34 @@ sendEmailBtn.addEventListener("click", async () => {
   }
 
   sendEmailBtn.disabled = true;
-  setStatus("loading", "Google 로그인 확인 후 보고서를 자동 발송합니다...");
+  setStatus("loading", "보고서를 자동 발송 중입니다...");
 
   try {
-    if (!window.GmailAuth.isGoogleConnected()) {
-      setStatus("loading", "Google 로그인 창이 열립니다. 로그인 후 자동으로 발송합니다...");
-    }
-
-    const accessToken = await window.GmailAuth.ensureGoogleAuth();
-    updateGoogleLoginUI();
-    setStatus("loading", "보고서를 자동 발송 중입니다...");
-
-    const recipient = await window.GmailAuth.sendReportViaGmail({
-      title: report.title,
-      report: report.report,
-      accessToken,
+    const response = await fetch("/api/send-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: report.title,
+        report: report.report,
+      }),
     });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "이메일 발송에 실패했습니다.");
+    }
 
     const updatedReport = {
       ...report,
       email_sent: true,
-      recipient,
+      recipient: data.recipient,
     };
     updateReportInHistory(updatedReport);
     showReport(updatedReport);
 
-    setStatus("success", `자동 발송 완료!\n발송 계정: ${window.GmailAuth.getGoogleUserEmail()}\n수신: ${recipient}`);
+    setStatus("success", `자동 발송 완료!\n수신: ${data.recipient}`);
   } catch (error) {
     setStatus("error", error.message);
     updateEmailButton(report);
-    updateGoogleLoginUI();
   } finally {
     if (!getCurrentReport()?.email_sent) {
       sendEmailBtn.disabled = false;
@@ -507,49 +486,6 @@ sendEmailBtn.addEventListener("click", async () => {
     }
   }
 });
-
-googleLoginBtn.addEventListener("click", async () => {
-  try {
-    googleLoginBtn.disabled = true;
-    await window.GmailAuth.requestGoogleToken({ prompt: "consent" });
-    updateGoogleLoginUI();
-    setStatus("success", `Google 로그인 완료! 이제 ② 이메일 자동 발송 버튼을 누르세요.`);
-  } catch (error) {
-    setStatus("error", error.message);
-  } finally {
-    googleLoginBtn.disabled = false;
-  }
-});
-
-googleLogoutBtn.addEventListener("click", () => {
-  window.GmailAuth.clearGoogleSession();
-  updateGoogleLoginUI();
-  setStatus("success", "Google 로그아웃되었습니다.");
-});
-
-async function bootstrap() {
-  try {
-    await window.GmailAuth.loadPublicConfig();
-    window.GmailAuth.restoreGoogleSession();
-
-    if (window.GmailAuth.hasClientId()) {
-      await window.GmailAuth.waitForGoogleScript();
-      window.GmailAuth.initGoogleAuth();
-    } else {
-      googleAuthStatus.textContent =
-        "GOOGLE_CLIENT_ID가 설정되지 않았습니다. Vercel 환경변수를 확인해 주세요.";
-      googleLoginBtn.disabled = true;
-    }
-  } catch (error) {
-    googleAuthStatus.textContent = error.message;
-    googleLoginBtn.disabled = true;
-  }
-
-  updateGoogleLoginUI();
-  renderHistory();
-  openReportFromHash();
-  updateEmailButton(getCurrentReport());
-}
 
 function openReportFromHash() {
   const match = location.hash.match(/^#report\/(.+)$/);
@@ -562,4 +498,6 @@ function openReportFromHash() {
 }
 
 window.addEventListener("hashchange", openReportFromHash);
-bootstrap();
+renderHistory();
+openReportFromHash();
+updateEmailButton(getCurrentReport());

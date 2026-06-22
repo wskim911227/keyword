@@ -12,7 +12,7 @@
       <h1>키워드 이슈 보고서</h1>
       <p>
         Gemini API의 Google 검색으로 최근 7일 주요 이슈를 수집하고
-        <strong>웹에서 확인</strong>한 뒤, Google로 <strong>로그인만</strong> 하면 발송 버튼으로 <strong>자동 이메일 발송</strong>됩니다.
+        <strong>웹에서 확인</strong>한 뒤, 버튼 한 번으로 <strong>won911227@gmail.com</strong>에 자동 발송됩니다.
       </p>
     </section>
 
@@ -37,15 +37,6 @@
               <button type="submit" id="generate-btn" class="btn-primary">보고서 생성</button>
             </div>
           </form>
-          <div id="google-auth-box" class="google-auth-box">
-            <p id="google-auth-status" class="google-auth-status">
-              ① Google 로그인 후 ② 이메일 자동 발송 버튼을 누르면 won911227@gmail.com 으로 자동 발송됩니다.
-            </p>
-            <div class="button-row auth-button-row">
-              <button type="button" id="google-login-btn" class="btn-google">① Google 로그인</button>
-              <button type="button" id="google-logout-btn" class="btn-ghost" hidden>로그아웃</button>
-            </div>
-          </div>
           <div id="status" class="status"></div>
           <div id="loading-panel" class="loading-panel" hidden>
             <div class="loading-header">
@@ -103,7 +94,7 @@
               <div id="viewer-meta" class="viewer-meta"></div>
             </div>
             <div class="viewer-actions">
-              <button type="button" id="send-email-btn" class="btn-secondary" disabled>② 이메일 자동 발송</button>
+              <button type="button" id="send-email-btn" class="btn-secondary" disabled>이메일 자동 발송</button>
               <button type="button" id="copy-report-btn" class="btn-ghost">전체 복사</button>
             </div>
           </div>
@@ -124,8 +115,6 @@
     </div>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="/static/js/gmail-auth.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

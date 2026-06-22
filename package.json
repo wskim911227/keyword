@@ -1,4 +1,7 @@
 {
   "name": "keyword-issue-report",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "nodemailer": "^6.10.1"
+  }
 }
