@@ -1,4 +1,4 @@
-const { sendReportEmail } = require("../lib/report-email");
+const { sendReportEmail, toFriendlyEmailError } = require("../lib/report-email");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
     console.error("send-report error:", err);
     return res.status(500).json({
       success: false,
-      error: err.message || "이메일 발송 중 오류가 발생했습니다.",
+      error: toFriendlyEmailError(err),
     });
   }
 };
