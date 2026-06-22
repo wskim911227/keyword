@@ -3,6 +3,9 @@ const MAX_HISTORY = 30;
 
 const form = document.getElementById("report-form");
 const statusEl = document.getElementById("status");
+const loadingPanel = document.getElementById("loading-panel");
+const loadingElapsed = document.getElementById("loading-elapsed");
+const loadingSteps = document.getElementById("loading-steps");
 const generateBtn = document.getElementById("generate-btn");
 const sendEmailBtn = document.getElementById("send-email-btn");
 const historyList = document.getElementById("history-list");
@@ -15,6 +18,14 @@ const queriesPanel = document.getElementById("queries-panel");
 const copyBtn = document.getElementById("copy-report-btn");
 
 let currentReportId = null;
+let loadingTimer = null;
+let loadingStartedAt = 0;
+
+const LOADING_STEP_SCHEDULE = [
+  { step: "analyze", at: 0 },
+  { step: "search", at: 8 },
+  { step: "write", at: 25 },
+];
 
 function escapeHtml(text) {
   return String(text)
@@ -230,6 +241,59 @@ function setStatus(type, message) {
   statusEl.textContent = message;
 }
 
+function hideStatus() {
+  statusEl.className = "status";
+  statusEl.textContent = "";
+}
+
+function updateLoadingSteps(elapsedSeconds) {
+  let activeStep = "analyze";
+
+  for (const item of LOADING_STEP_SCHEDULE) {
+    if (elapsedSeconds >= item.at) {
+      activeStep = item.step;
+    }
+  }
+
+  loadingSteps.querySelectorAll("li").forEach((item) => {
+    const step = item.dataset.step;
+    item.classList.remove("active", "done");
+
+    if (step === activeStep) {
+      item.classList.add("active");
+      return;
+    }
+
+    const activeIndex = LOADING_STEP_SCHEDULE.findIndex((entry) => entry.step === activeStep);
+    const stepIndex = LOADING_STEP_SCHEDULE.findIndex((entry) => entry.step === step);
+    if (stepIndex < activeIndex) {
+      item.classList.add("done");
+    }
+  });
+}
+
+function startLoadingPanel() {
+  loadingStartedAt = Date.now();
+  loadingPanel.hidden = false;
+  hideStatus();
+  updateLoadingSteps(0);
+  loadingElapsed.textContent = "(경과 0초)";
+
+  loadingTimer = window.setInterval(() => {
+    const elapsedSeconds = Math.floor((Date.now() - loadingStartedAt) / 1000);
+    loadingElapsed.textContent = `(경과 ${elapsedSeconds}초)`;
+    updateLoadingSteps(elapsedSeconds);
+  }, 1000);
+}
+
+function stopLoadingPanel() {
+  if (loadingTimer) {
+    window.clearInterval(loadingTimer);
+    loadingTimer = null;
+  }
+  loadingPanel.hidden = true;
+}
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
 });
@@ -255,10 +319,7 @@ form.addEventListener("submit", async (event) => {
   if (!keywords) return;
 
   generateBtn.disabled = true;
-  setStatus(
-    "loading",
-    "Google 검색으로 최근 7일 이슈를 수집하고 보고서를 생성 중입니다...\n완료까지 30초~2분 정도 걸릴 수 있습니다."
-  );
+  startLoadingPanel();
 
   try {
     const response = await fetch("/api/generate-report", {
@@ -295,6 +356,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     setStatus("error", error.message);
   } finally {
+    stopLoadingPanel();
     generateBtn.disabled = false;
   }
 });

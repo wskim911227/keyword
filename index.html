@@ -38,6 +38,25 @@
             </div>
           </form>
           <div id="status" class="status"></div>
+          <div id="loading-panel" class="loading-panel" hidden>
+            <div class="loading-header">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              <strong>Google 검색 및 보고서 생성 중</strong>
+            </div>
+            <p class="loading-estimate">
+              예상 소요 시간: <strong>약 30초 ~ 2분</strong>
+              <span id="loading-elapsed" class="loading-elapsed">(경과 0초)</span>
+            </p>
+            <ul id="loading-steps" class="loading-steps">
+              <li data-step="analyze" class="active">입력한 키워드를 분석하고 검색 쿼리를 만드는 중</li>
+              <li data-step="search">Google에서 최근 7일 관련 이슈를 검색하는 중</li>
+              <li data-step="write">검색 결과를 바탕으로 보고서를 작성하는 중</li>
+            </ul>
+            <p class="loading-note">
+              Gemini가 여러 번 검색할 수 있어 키워드가 많거나 이슈가 많으면 최대 2분까지 걸릴 수 있습니다.
+              완료될 때까지 이 페이지를 닫지 말고 기다려 주세요.
+            </p>
+          </div>
         </section>
 
         <section id="report-viewer" class="card viewer">
