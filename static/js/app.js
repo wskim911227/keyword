@@ -145,7 +145,7 @@ function estimateLoadingProgress(elapsedSeconds) {
 function updateCatProgress(elapsedSeconds, forcePercent = null) {
   const percent = forcePercent ?? Math.round(estimateLoadingProgress(elapsedSeconds));
   const trackWidth = catProgressTrack.clientWidth || 0;
-  const runnerMax = Math.max(trackWidth - 40, 0);
+  const runnerMax = Math.max(trackWidth - 64, 0);
   const runnerLeft = (percent / 100) * runnerMax;
 
   catProgressFill.style.width = `${percent}%`;
