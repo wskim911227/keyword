@@ -18,40 +18,6 @@ function clearGoogleSession() {
   googleUserEmail = null;
 }
 
-function utf8ToBase64(text) {
-  const bytes = new TextEncoder().encode(text);
-  let binary = "";
-  const chunkSize = 0x8000;
-
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-
-  return btoa(binary);
-}
-
-function toBase64Url(text) {
-  return utf8ToBase64(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function encodeMimeHeader(text) {
-  return `=?UTF-8?B?${utf8ToBase64(text)}?=`;
-}
-
-function buildRawEmail({ to, subject, body }) {
-  const content = [
-    `To: ${to}`,
-    `Subject: ${encodeMimeHeader(subject)}`,
-    "MIME-Version: 1.0",
-    'Content-Type: text/plain; charset="UTF-8"',
-    "Content-Transfer-Encoding: base64",
-    "",
-    utf8ToBase64(body),
-  ].join("\r\n");
-
-  return toBase64Url(content);
-}
-
 async function loadPublicConfig() {
   const response = await fetch("/api/config");
   const data = await response.json();
@@ -159,31 +125,22 @@ async function ensureGoogleAuth() {
 }
 
 async function sendReportViaGmail({ title, report, accessToken }) {
-  const response = await fetch("https://www.googleapis.com/gmail/v1/users/me/messages/send", {
+  const response = await fetch("/api/send-report", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      raw: buildRawEmail({
-        to: reportRecipient,
-        subject: title,
-        body: report,
-      }),
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, report, accessToken }),
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
+  const data = await response.json();
+  if (!response.ok || !data.success) {
     if (response.status === 401) {
       clearGoogleSession();
-      throw new Error("Google 로그인이 만료되었습니다. 다시 로그인해 주세요.");
+      throw new Error(data.error || "Google 로그인이 필요합니다.");
     }
-    throw new Error(errorBody || "Gmail API 발송에 실패했습니다.");
+    throw new Error(data.error || "이메일 자동 발송에 실패했습니다.");
   }
 
-  return reportRecipient;
+  return data.recipient;
 }
 
 function restoreGoogleSession() {

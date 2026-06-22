@@ -196,12 +196,12 @@ function getCurrentReport() {
 function updateEmailButton(report) {
   if (!report) {
     sendEmailBtn.disabled = true;
-    sendEmailBtn.textContent = "이메일 발송";
+    sendEmailBtn.textContent = "② 이메일 자동 발송";
     return;
   }
 
   sendEmailBtn.disabled = false;
-  sendEmailBtn.textContent = report.email_sent ? "이메일 재발송" : "이메일 발송";
+  sendEmailBtn.textContent = report.email_sent ? "② 이메일 재발송" : "② 이메일 자동 발송";
 }
 
 function addToHistory(report) {
@@ -283,14 +283,14 @@ function updateGoogleLoginUI() {
   const email = window.GmailAuth.getGoogleUserEmail();
 
   if (connected && email) {
-    googleAuthStatus.textContent = `${email} 계정으로 로그인됨 · 발송 대상: ${recipient}`;
+    googleAuthStatus.textContent = `① 로그인 완료: ${email} → ② 이메일 자동 발송 버튼만 누르면 ${recipient} 로 자동 발송됩니다.`;
     googleLoginBtn.hidden = true;
     googleLogoutBtn.hidden = false;
     return;
   }
 
   googleAuthStatus.textContent =
-    "이메일 발송 전 Google 계정으로 로그인해 주세요. (앱 비밀번호 설정 불필요)";
+    `① Google 로그인 후 ② 이메일 자동 발송 버튼을 누르면 ${recipient} 으로 자동 발송됩니다.`;
   googleLoginBtn.hidden = false;
   googleLogoutBtn.hidden = true;
 }
@@ -469,11 +469,16 @@ sendEmailBtn.addEventListener("click", async () => {
   }
 
   sendEmailBtn.disabled = true;
-  setStatus("loading", "Google 계정으로 이메일을 발송 중입니다...");
+  setStatus("loading", "Google 로그인 확인 후 보고서를 자동 발송합니다...");
 
   try {
+    if (!window.GmailAuth.isGoogleConnected()) {
+      setStatus("loading", "Google 로그인 창이 열립니다. 로그인 후 자동으로 발송합니다...");
+    }
+
     const accessToken = await window.GmailAuth.ensureGoogleAuth();
     updateGoogleLoginUI();
+    setStatus("loading", "보고서를 자동 발송 중입니다...");
 
     const recipient = await window.GmailAuth.sendReportViaGmail({
       title: report.title,
@@ -489,7 +494,7 @@ sendEmailBtn.addEventListener("click", async () => {
     updateReportInHistory(updatedReport);
     showReport(updatedReport);
 
-    setStatus("success", `이메일 발송 완료!\n발송 계정: ${window.GmailAuth.getGoogleUserEmail()}\n수신: ${recipient}`);
+    setStatus("success", `자동 발송 완료!\n발송 계정: ${window.GmailAuth.getGoogleUserEmail()}\n수신: ${recipient}`);
   } catch (error) {
     setStatus("error", error.message);
     updateEmailButton(report);
@@ -508,7 +513,7 @@ googleLoginBtn.addEventListener("click", async () => {
     googleLoginBtn.disabled = true;
     await window.GmailAuth.requestGoogleToken({ prompt: "consent" });
     updateGoogleLoginUI();
-    setStatus("success", `Google 로그인 완료: ${window.GmailAuth.getGoogleUserEmail()}`);
+    setStatus("success", `Google 로그인 완료! 이제 ② 이메일 자동 발송 버튼을 누르세요.`);
   } catch (error) {
     setStatus("error", error.message);
   } finally {
