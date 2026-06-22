@@ -6,6 +6,10 @@ const statusEl = document.getElementById("status");
 const loadingPanel = document.getElementById("loading-panel");
 const loadingElapsed = document.getElementById("loading-elapsed");
 const loadingSteps = document.getElementById("loading-steps");
+const catProgressFill = document.getElementById("cat-progress-fill");
+const catProgressPercent = document.getElementById("cat-progress-percent");
+const catRunner = document.getElementById("cat-runner");
+const catProgressTrack = document.getElementById("cat-progress-track");
 const generateBtn = document.getElementById("generate-btn");
 const sendEmailBtn = document.getElementById("send-email-btn");
 const historyList = document.getElementById("history-list");
@@ -27,18 +31,21 @@ const LOADING_STEP_SCHEDULE = [
   { step: "write", at: 25 },
 ];
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function formatInlineMarkdown(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>'
+    );
 }
 
 function markdownToHtml(markdown) {
   const lines = String(markdown || "").split("\n");
   const html = [];
   let inList = false;
+  let inIssueBlock = false;
+  let inRefSection = false;
 
   function closeList() {
     if (inList) {
@@ -47,55 +54,111 @@ function markdownToHtml(markdown) {
     }
   }
 
+  function closeRefSection() {
+    if (inRefSection) {
+      closeList();
+      html.push("</div>");
+      inRefSection = false;
+    }
+  }
+
+  function closeIssueBlock() {
+    closeRefSection();
+    if (inIssueBlock) {
+      html.push("</div>");
+      inIssueBlock = false;
+    }
+  }
+
   for (const line of lines) {
     if (/^### (.+)$/.test(line)) {
       closeList();
-      html.push(`<h3>${escapeHtml(line.slice(4))}</h3>`);
+      closeIssueBlock();
+      html.push(`<div class="issue-block"><h3>${escapeHtml(line.slice(4))}</h3>`);
+      inIssueBlock = true;
       continue;
     }
+
     if (/^## (.+)$/.test(line)) {
       closeList();
+      closeIssueBlock();
       html.push(`<h2>${escapeHtml(line.slice(3))}</h2>`);
       continue;
     }
+
     if (/^# (.+)$/.test(line)) {
       closeList();
+      closeIssueBlock();
       html.push(`<h1>${escapeHtml(line.slice(2))}</h1>`);
       continue;
     }
+
+    if (inIssueBlock && /^- \*\*참조 URL\*\*:?\s*$/.test(line.trim())) {
+      closeList();
+      closeRefSection();
+      html.push('<div class="issue-refs"><p class="issue-refs-title">참조 URL</p>');
+      inRefSection = true;
+      continue;
+    }
+
     if (/^- (.+)$/.test(line)) {
       if (!inList) {
         html.push("<ul>");
         inList = true;
       }
-      const item = line
-        .slice(2)
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(
-          /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener">$1</a>'
-        );
-      html.push(`<li>${item}</li>`);
+      html.push(`<li>${formatInlineMarkdown(line.slice(2))}</li>`);
       continue;
     }
 
     closeList();
     if (!line.trim()) {
-      html.push("<br>");
+      if (!inRefSection) {
+        html.push("<br>");
+      }
       continue;
     }
 
-    const paragraph = escapeHtml(line)
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener">$1</a>'
-      );
-    html.push(`<p>${paragraph}</p>`);
+    html.push(`<p>${formatInlineMarkdown(line)}</p>`);
   }
 
   closeList();
+  closeIssueBlock();
   return html.join("");
+}
+
+function estimateLoadingProgress(elapsedSeconds) {
+  if (elapsedSeconds <= 8) {
+    return 8 + elapsedSeconds * 2;
+  }
+  if (elapsedSeconds <= 25) {
+    return 24 + (elapsedSeconds - 8) * 1.5;
+  }
+  if (elapsedSeconds <= 60) {
+    return 49 + (elapsedSeconds - 25) * 0.9;
+  }
+  if (elapsedSeconds <= 120) {
+    return 80 + (elapsedSeconds - 60) * 0.18;
+  }
+  return 92;
+}
+
+function updateCatProgress(elapsedSeconds, forcePercent = null) {
+  const percent = forcePercent ?? Math.round(estimateLoadingProgress(elapsedSeconds));
+  const trackWidth = catProgressTrack.clientWidth || 0;
+  const runnerMax = Math.max(trackWidth - 20, 0);
+  const runnerLeft = (percent / 100) * runnerMax;
+
+  catProgressFill.style.width = `${percent}%`;
+  catProgressPercent.textContent = String(percent);
+  catRunner.style.left = `${runnerLeft}px`;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function formatDateTime(iso) {
@@ -277,21 +340,34 @@ function startLoadingPanel() {
   loadingPanel.hidden = false;
   hideStatus();
   updateLoadingSteps(0);
+  updateCatProgress(0, 0);
   loadingElapsed.textContent = "(경과 0초)";
 
   loadingTimer = window.setInterval(() => {
     const elapsedSeconds = Math.floor((Date.now() - loadingStartedAt) / 1000);
     loadingElapsed.textContent = `(경과 ${elapsedSeconds}초)`;
     updateLoadingSteps(elapsedSeconds);
+    updateCatProgress(elapsedSeconds);
   }, 1000);
 }
 
-function stopLoadingPanel() {
+function stopLoadingPanel(completed = false) {
   if (loadingTimer) {
     window.clearInterval(loadingTimer);
     loadingTimer = null;
   }
+
+  if (completed && !loadingPanel.hidden) {
+    updateCatProgress(0, 100);
+    window.setTimeout(() => {
+      loadingPanel.hidden = true;
+      updateCatProgress(0, 0);
+    }, 350);
+    return;
+  }
+
   loadingPanel.hidden = true;
+  updateCatProgress(0, 0);
 }
 
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -321,6 +397,7 @@ form.addEventListener("submit", async (event) => {
   generateBtn.disabled = true;
   startLoadingPanel();
 
+  let succeeded = false;
   try {
     const response = await fetch("/api/generate-report", {
       method: "POST",
@@ -353,10 +430,11 @@ form.addEventListener("submit", async (event) => {
       "success",
       `보고서 생성 완료!\n웹에서 아래 보고서를 확인한 뒤, 필요하면 이메일 발송 버튼을 눌러 주세요.\n참조 출처: ${data.source_count}건`
     );
+    succeeded = true;
   } catch (error) {
     setStatus("error", error.message);
   } finally {
-    stopLoadingPanel();
+    stopLoadingPanel(succeeded);
     generateBtn.disabled = false;
   }
 });

@@ -230,27 +230,56 @@ button {
 }
 
 .loading-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-size: 1rem;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
-.loading-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #93c5fd;
-  border-top-color: #1d4ed8;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
+.cat-progress {
+  margin-bottom: 16px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.cat-progress-track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: #dbeafe;
+  overflow: visible;
+  box-shadow: inset 0 1px 3px rgba(30, 64, 175, 0.12);
+}
+
+.cat-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+  transition: width 0.45s ease;
+}
+
+.cat-runner {
+  position: absolute;
+  top: -30px;
+  left: 0;
+  font-size: 30px;
+  line-height: 1;
+  transform: translateX(-4px);
+  transition: left 0.45s ease;
+  animation: cat-hop 0.35s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 4px rgba(30, 64, 175, 0.2));
+}
+
+@keyframes cat-hop {
+  from {
+    transform: translateX(-4px) translateY(0) scaleX(1);
   }
+  to {
+    transform: translateX(-4px) translateY(-8px) scaleX(1.05);
+  }
+}
+
+.cat-progress-label {
+  margin: 10px 0 0;
+  font-size: 0.92rem;
+  color: #1d4ed8;
 }
 
 .loading-estimate {
@@ -371,6 +400,53 @@ button {
 
 .report-content a {
   color: #1d4ed8;
+}
+
+.issue-block {
+  margin-top: 1.5em;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.issue-block:first-child {
+  margin-top: 0;
+}
+
+.issue-block h3 {
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eef2ff;
+}
+
+.issue-refs {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+}
+
+.issue-refs-title {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.issue-refs ul {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.issue-refs li {
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.issue-refs a {
+  font-weight: 600;
 }
 
 .source-list {

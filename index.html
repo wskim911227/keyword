@@ -40,9 +40,19 @@
           <div id="status" class="status"></div>
           <div id="loading-panel" class="loading-panel" hidden>
             <div class="loading-header">
-              <span class="loading-spinner" aria-hidden="true"></span>
               <strong>Google 검색 및 보고서 생성 중</strong>
             </div>
+
+            <div class="cat-progress" aria-hidden="true">
+              <div id="cat-progress-track" class="cat-progress-track">
+                <div id="cat-progress-fill" class="cat-progress-fill"></div>
+                <div id="cat-runner" class="cat-runner">🐱</div>
+              </div>
+              <p class="cat-progress-label">
+                고양이가 열심히 검색 중... <strong id="cat-progress-percent">0</strong>%
+              </p>
+            </div>
+
             <p class="loading-estimate">
               예상 소요 시간: <strong>약 30초 ~ 2분</strong>
               <span id="loading-elapsed" class="loading-elapsed">(경과 0초)</span>
