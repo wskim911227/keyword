@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>키워드 이슈 보고서</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>키워드 이슈 보고서</h1>
+      <p>
+        Gemini API의 Google 검색으로 최근 7일 주요 이슈를 수집하고,
+        <strong>웹에서 바로 확인</strong>한 뒤 <strong>won911227@gmail.com</strong>으로 자동 발송합니다.
+      </p>
+    </section>
+
+    <div class="layout">
+      <aside class="card sidebar">
+        <h2>생성 기록</h2>
+        <div id="history-list" class="history-list"></div>
+      </aside>
+
+      <div class="main-stack">
+        <section class="card">
+          <form id="report-form">
+            <label for="keywords">검색 키워드</label>
+            <textarea
+              id="keywords"
+              name="keywords"
+              placeholder="예: 인공지능, 반도체, 삼성전자"
+              required
+            ></textarea>
+            <div class="hint">쉼표(,) 또는 줄바꿈으로 여러 키워드를 입력할 수 있습니다.</div>
+            <button type="submit" id="submit-btn" class="btn-primary">보고서 생성 및 이메일 발송</button>
+          </form>
+          <div id="status" class="status"></div>
+        </section>
+
+        <section id="report-viewer" class="card viewer">
+          <div class="viewer-header">
+            <div>
+              <h2 id="viewer-title">보고서</h2>
+              <div id="viewer-meta" class="viewer-meta"></div>
+            </div>
+            <div class="viewer-actions">
+              <button type="button" id="copy-report-btn" class="btn-ghost">전체 복사</button>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button type="button" class="tab active" data-tab="report">보고서</button>
+            <button type="button" class="tab" data-tab="sources">참조 출처</button>
+            <button type="button" class="tab" data-tab="queries">검색 쿼리</button>
+          </div>
+
+          <div class="panel active" data-panel="report">
+            <article id="report-content" class="report-content"></article>
+          </div>
+          <div id="sources-panel" class="panel" data-panel="sources"></div>
+          <div id="queries-panel" class="panel" data-panel="queries"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
