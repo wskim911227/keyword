@@ -236,11 +236,13 @@ button {
 
 .cat-progress {
   margin-bottom: 16px;
+  padding-top: 4px;
 }
 
 .cat-progress-track {
   position: relative;
-  height: 14px;
+  height: 16px;
+  margin-top: 30px;
   border-radius: 999px;
   background: #dbeafe;
   overflow: visible;
@@ -257,22 +259,31 @@ button {
 
 .cat-runner {
   position: absolute;
-  top: -30px;
+  top: -26px;
   left: 0;
-  font-size: 30px;
-  line-height: 1;
-  transform: translateX(-4px);
+  width: 48px;
+  height: 36px;
+  transform: translateX(-8px);
   transition: left 0.45s ease;
-  animation: cat-hop 0.35s ease-in-out infinite alternate;
-  filter: drop-shadow(0 2px 4px rgba(30, 64, 175, 0.2));
+  pointer-events: none;
 }
 
-@keyframes cat-hop {
+.pixel-cat {
+  width: 48px;
+  height: 36px;
+  background-image: url("/static/images/pixel-cat-sprite.svg");
+  background-repeat: no-repeat;
+  background-size: 192px 36px;
+  image-rendering: pixelated;
+  animation: pixel-cat-run 0.45s steps(4) infinite;
+}
+
+@keyframes pixel-cat-run {
   from {
-    transform: translateX(-4px) translateY(0) scaleX(1);
+    background-position: 0 0;
   }
   to {
-    transform: translateX(-4px) translateY(-8px) scaleX(1.05);
+    background-position: -192px 0;
   }
 }
 
